@@ -253,7 +253,57 @@
         {% if selected_crop.strain %}<span style="opacity: 0.7;">{{ selected_crop.strain }}</span>{% endif %}
         {% if selected_crop.medium %}<span style="opacity: 0.7;">· {{ selected_crop.medium }}</span>{% endif %}
     </div>
+    <a href="#" onclick="showEditCrop()" class="btn btn-secondary">✏️ Edit Crop</a>
     <a href="#" onclick="showCreateCrop()" class="btn btn-primary">+ New Crop</a>
+</div>
+
+<!-- Edit Crop Modal -->
+<div id="edit-crop-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:100; display:none; align-items:center; justify-content:center;">
+    <div style="background: var(--mid-forest); border: 1px solid rgba(78,205,78,0.2); border-radius: 16px; padding: 30px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h2 style="color: var(--leaf); margin-bottom: 20px;">Edit Crop</h2>
+        <form id="edit-crop-form" onsubmit="saveEditCrop(event)">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" id="edit-name" class="form-control" value="{{ selected_crop.name }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Strain</label>
+                <input type="text" id="edit-strain" class="form-control" value="{{ selected_crop.strain or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select id="edit-status" class="form-control">
+                    {% for s in ['seedling', 'vegetative', 'flowering', 'drying', 'curing', 'harvested'] %}
+                        <option value="{{ s }}" {% if selected_crop.status == s %}selected{% endif %}>{{ s|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Medium</label>
+                <input type="text" id="edit-medium" class="form-control" value="{{ selected_crop.medium or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Grow Space</label>
+                <input type="text" id="edit-grow-space" class="form-control" value="{{ selected_crop.grow_space or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Date Planted</label>
+                <input type="date" id="edit-date-planted" class="form-control" value="{{ selected_crop.date_planted.strftime('%Y-%m-%d') if selected_crop.date_planted else '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Date Flipped</label>
+                <input type="date" id="edit-date-flipped" class="form-control" value="{{ selected_crop.date_flipped.strftime('%Y-%m-%d') if selected_crop.date_flipped else '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Harvest Date</label>
+                <input type="date" id="edit-harvest-date" class="form-control" value="{{ selected_crop.harvest_date.strftime('%Y-%m-%d') if selected_crop.harvest_date else '' }}">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" onclick="hideEditCrop()">Cancel</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Dashboard Stats -->
@@ -761,6 +811,51 @@
             location.reload();
         }
     }
+
+    function showEditCrop() {
+        document.getElementById('edit-crop-modal').style.display = 'flex';
+    }
+
+    function hideEditCrop() {
+        document.getElementById('edit-crop-modal').style.display = 'none';
+    }
+
+    async function saveEditCrop(event) {
+        event.preventDefault();
+        const data = {
+            name: document.getElementById('edit-name').value,
+            strain: document.getElementById('edit-strain').value,
+            status: document.getElementById('edit-status').value,
+            medium: document.getElementById('edit-medium').value,
+            grow_space: document.getElementById('edit-grow-space').value,
+            date_planted: document.getElementById('edit-date-planted').value,
+            date_flipped: document.getElementById('edit-date-flipped').value,
+            harvest_date: document.getElementById('edit-harvest-date').value
+        };
+        // Remove empty strings
+        Object.keys(data).forEach(k => { if (data[k] === '') delete data[k]; });
+        
+        try {
+            const result = await fetch(`/crop/${currentCropId}/edit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await result.json();
+            if (json.success) {
+                location.reload();
+            } else {
+                alert('Failed: ' + (json.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Failed to update crop');
+        }
+    }
+
+    // Close modal on background click
+    document.getElementById('edit-crop-modal').addEventListener('click', function(e) {
+        if (e.target === this) hideEditCrop();
+    });
 
     function showCreateCrop() {
         const name = prompt('Crop name:');
