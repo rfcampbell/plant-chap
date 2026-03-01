@@ -1,0 +1,17 @@
+[Unit]
+Description=Plant Chap Gunicorn
+After=network.target postgresql.service
+
+[Service]
+User=rcampbell
+Group=rcampbell
+WorkingDirectory=/home/rcampbell/plant-chap
+Environment="PATH=/home/rcampbell/plant-chap/venv/bin"
+Environment="FLASK_ENV=development"
+EnvironmentFile=/home/rcampbell/plant-chap/.env
+ExecStart=/home/rcampbell/plant-chap/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5001 wsgi:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

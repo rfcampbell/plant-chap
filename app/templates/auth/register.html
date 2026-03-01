@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 50px auto; text-align: center;">
+    <div style="background: rgba(240, 244, 248, 0.05); backdrop-filter: blur(10px); padding: 40px; border-radius: 16px; border: 1px solid rgba(240, 244, 248, 0.1);">
+        <h1 style="font-size: 3rem; font-weight: 700; background: linear-gradient(135deg, var(--leaf), var(--amber)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 30px;">Plant Chap</h1>
+        
+        <h2 style="color: var(--mist); margin-bottom: 30px; font-weight: 400;">Create Account</h2>
+
+        <form method="POST" style="text-align: left;">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.display_name.label(class="form-label") }}
+                {{ form.display_name(class="form-control", placeholder="Your name") }}
+                {% if form.display_name.errors %}
+                    {% for error in form.display_name.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control", placeholder="your@email.com") }}
+                {% if form.email.errors %}
+                    {% for error in form.email.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control", placeholder="Minimum 8 characters") }}
+                {% if form.password.errors %}
+                    {% for error in form.password.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password2.label(class="form-label") }}
+                {{ form.password2(class="form-control", placeholder="Confirm your password") }}
+                {% if form.password2.errors %}
+                    {% for error in form.password2.errors %}
+                        <div class="form-error">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="form-group" style="margin-top: 30px;">
+                {{ form.submit(class="btn btn-primary", style="width: 100%;") }}
+            </div>
+        </form>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(240, 244, 248, 0.1);">
+            <p style="color: rgba(240, 244, 248, 0.7);">
+                Already have an account? 
+                <a href="{{ url_for('auth.login') }}" style="color: var(--leaf); text-decoration: none;">Sign in</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

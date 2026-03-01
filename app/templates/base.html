@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Plant Chap">
+    <meta name="theme-color" content="#0a1a0a">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+    <title>{% if title %}{{ title }} - {% endif %}Plant Chap</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --deep-forest: #0a1a0a;
+            --mid-forest: #1a2f1a;
+            --canopy: #2d4a2d;
+            --amber: #d4a017;
+            --leaf: #4ecd4e;
+            --bark: #8B6914;
+            --mist: #e8f0e8;
+            --moss: #2d6a2d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, var(--deep-forest) 0%, var(--mid-forest) 50%, var(--canopy) 100%);
+            color: var(--mist);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Falling leaf particles */
+        .falling-leaf {
+            position: fixed;
+            top: -20px;
+            width: 12px;
+            height: 12px;
+            opacity: 0.4;
+            z-index: 0;
+            border-radius: 50% 0 50% 0;
+            animation: leafFall linear infinite;
+        }
+
+        .falling-leaf:nth-child(1) { left: 8%; width: 10px; height: 10px; background: rgba(78, 205, 78, 0.3); animation-duration: 25s; animation-delay: 0s; }
+        .falling-leaf:nth-child(2) { left: 22%; width: 14px; height: 14px; background: rgba(212, 160, 23, 0.25); animation-duration: 22s; animation-delay: 4s; }
+        .falling-leaf:nth-child(3) { left: 40%; width: 8px; height: 8px; background: rgba(45, 106, 45, 0.3); animation-duration: 28s; animation-delay: 2s; }
+        .falling-leaf:nth-child(4) { left: 58%; width: 12px; height: 12px; background: rgba(78, 205, 78, 0.2); animation-duration: 24s; animation-delay: 6s; }
+        .falling-leaf:nth-child(5) { left: 75%; width: 10px; height: 10px; background: rgba(212, 160, 23, 0.3); animation-duration: 30s; animation-delay: 1s; }
+        .falling-leaf:nth-child(6) { left: 90%; width: 9px; height: 9px; background: rgba(45, 106, 45, 0.25); animation-duration: 26s; animation-delay: 8s; }
+
+        @keyframes leafFall {
+            0% {
+                top: -20px;
+                transform: translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.4;
+            }
+            90% {
+                opacity: 0.4;
+            }
+            100% {
+                top: 110vh;
+                transform: translateX(80px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+        }
+
+        /* Header styles */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--leaf), var(--amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .user-nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            color: var(--mist);
+            opacity: 0.8;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--leaf), var(--amber));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(78, 205, 78, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(232, 240, 232, 0.1);
+            color: var(--mist);
+            border: 1px solid rgba(232, 240, 232, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(232, 240, 232, 0.2);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #e08080;
+            border: 1px solid rgba(224, 128, 128, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(224, 128, 128, 0.1);
+            color: #f09090;
+        }
+
+        /* Flash messages */
+        .flash-messages {
+            margin-bottom: 30px;
+        }
+
+        .flash-message {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            animation: slideInDown 0.5s ease;
+        }
+
+        .flash-message.success {
+            background: rgba(45, 106, 45, 0.2);
+            border: 1px solid var(--moss);
+            color: #90ee90;
+        }
+
+        .flash-message.danger,
+        .flash-message.error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            color: #ffcccb;
+        }
+
+        .flash-message.info {
+            background: rgba(78, 205, 78, 0.2);
+            border: 1px solid var(--leaf);
+            color: #b0f0b0;
+        }
+
+        .flash-message.warning {
+            background: rgba(212, 160, 23, 0.2);
+            border: 1px solid var(--amber);
+            color: #ffd700;
+        }
+
+        /* Form styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--mist);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(232, 240, 232, 0.05);
+            border: 1px solid rgba(232, 240, 232, 0.2);
+            border-radius: 8px;
+            color: var(--mist);
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--leaf);
+            box-shadow: 0 0 0 3px rgba(78, 205, 78, 0.1);
+        }
+
+        .form-control::placeholder {
+            color: rgba(232, 240, 232, 0.5);
+        }
+
+        .form-error {
+            color: #ffcccb;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        /* Animation utilities */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* Responsive utilities */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2rem;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .user-nav {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Falling leaf particles -->
+    <div class="falling-leaf"></div>
+    <div class="falling-leaf"></div>
+    <div class="falling-leaf"></div>
+    <div class="falling-leaf"></div>
+    <div class="falling-leaf"></div>
+    <div class="falling-leaf"></div>
+
+    <div class="container">
+        {% if current_user.is_authenticated %}
+        <header>
+            <a href="{{ url_for('dashboard.index') }}" class="logo">🌱 Plant Chap</a>
+            <div class="user-nav">
+                <div class="user-info">
+                    Welcome, {{ current_user.display_name }}!
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
+            </div>
+        </header>
+        {% endif %}
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Main content -->
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    {% block scripts %}{% endblock %}
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/sw.js');
+    }
+    </script>
+</body>
+</html>

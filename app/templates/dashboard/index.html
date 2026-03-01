@@ -1,0 +1,793 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .crop-selector {
+        background: rgba(232, 240, 232, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px solid rgba(232, 240, 232, 0.1);
+        margin-bottom: 30px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .crop-select {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .crop-info {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .crop-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-vegetative { background: rgba(45, 106, 45, 0.3); color: #90ee90; }
+    .badge-flowering { background: rgba(255, 107, 157, 0.3); color: #ff6b9d; }
+    .badge-seedling { background: rgba(212, 160, 23, 0.3); color: #d4a017; }
+    .badge-drying { background: rgba(78, 205, 78, 0.3); color: #4ecd4e; }
+    .badge-curing { background: rgba(107, 157, 255, 0.3); color: #6b9dff; }
+    .badge-harvested { background: rgba(224, 224, 64, 0.3); color: #e0e040; }
+
+    .dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        background: rgba(232, 240, 232, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 25px;
+        border-radius: 16px;
+        border: 1px solid rgba(232, 240, 232, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        animation: fadeIn 0.5s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 40px rgba(78, 205, 78, 0.1);
+    }
+
+    .stat-card.clickable { cursor: pointer; }
+
+    .stat-label {
+        color: rgba(232, 240, 232, 0.7);
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--leaf);
+        line-height: 1;
+    }
+
+    .stat-unit {
+        font-size: 1rem;
+        color: var(--mist);
+        opacity: 0.7;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+        overflow-x: auto;
+        padding: 10px 0;
+    }
+
+    .tab-btn {
+        padding: 12px 24px;
+        background: rgba(232, 240, 232, 0.05);
+        border: 1px solid rgba(232, 240, 232, 0.1);
+        border-radius: 8px;
+        color: var(--mist);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        font-family: inherit;
+    }
+
+    .tab-btn:hover { background: rgba(232, 240, 232, 0.1); }
+
+    .tab-btn.active {
+        background: linear-gradient(135deg, var(--leaf), var(--amber));
+        border-color: transparent;
+        color: white;
+    }
+
+    .tab-content { display: none; animation: fadeIn 0.5s ease; }
+    .tab-content.active { display: block; }
+
+    .section {
+        background: rgba(232, 240, 232, 0.03);
+        backdrop-filter: blur(10px);
+        padding: 30px;
+        border-radius: 16px;
+        border: 1px solid rgba(232, 240, 232, 0.1);
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--leaf);
+        margin-bottom: 20px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .form-group { margin-bottom: 0; }
+
+    .log-container {
+        max-height: none;
+        overflow-y: visible;
+        padding-bottom: 60px;
+    }
+
+    .log-item {
+        background: rgba(232, 240, 232, 0.03);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(232, 240, 232, 0.1);
+        margin-bottom: 15px;
+    }
+
+    .log-timestamp {
+        color: rgba(232, 240, 232, 0.6);
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+    }
+
+    .log-content { color: var(--mist); line-height: 1.6; }
+
+    .log-actions { float: right; display: flex; gap: 10px; }
+
+    .btn-small { padding: 6px 12px; font-size: 0.8rem; }
+
+    .chart-container {
+        background: rgba(232, 240, 232, 0.02);
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 20px;
+    }
+
+    .chart-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        justify-content: center;
+    }
+
+    .chart-period {
+        padding: 8px 16px;
+        background: rgba(232, 240, 232, 0.05);
+        border: 1px solid rgba(232, 240, 232, 0.1);
+        border-radius: 6px;
+        color: var(--mist);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .chart-period.active, .chart-period:hover {
+        background: var(--leaf);
+        color: white;
+    }
+
+    .param-category-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--leaf);
+        margin: 20px 0 12px 0;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(78, 205, 78, 0.15);
+    }
+
+    .param-category-title:first-of-type {
+        margin-top: 0;
+    }
+
+    .param-collapsible {
+        margin-top: 20px;
+    }
+
+    .param-collapsible[open] summary .param-arrow {
+        transform: rotate(90deg);
+    }
+
+    .param-collapsible summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .param-collapsible summary {
+        list-style: none;
+    }
+
+    @media (max-width: 768px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .tabs { justify-content: center; }
+        .tab-btn { padding: 10px 16px; font-size: 0.8rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Crop Selector -->
+<div class="crop-selector">
+    <div style="flex: 1; min-width: 200px;">
+        <label class="form-label" for="crop-select">Select Crop:</label>
+        <select id="crop-select" class="form-control" onchange="switchCrop(this.value)">
+            {% for crop in crops %}
+                <option value="{{ crop.id }}" {% if crop.id == selected_crop.id %}selected{% endif %}>
+                    {{ crop.name }}{% if crop.strain %} ({{ crop.strain }}){% endif %}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="crop-info">
+        <span class="crop-badge badge-{{ selected_crop.status }}">{{ selected_crop.status }}</span>
+        {% if selected_crop.strain %}<span style="opacity: 0.7;">{{ selected_crop.strain }}</span>{% endif %}
+        {% if selected_crop.medium %}<span style="opacity: 0.7;">· {{ selected_crop.medium }}</span>{% endif %}
+    </div>
+    <a href="#" onclick="showCreateCrop()" class="btn btn-primary">+ New Crop</a>
+</div>
+
+<!-- Dashboard Stats -->
+<div class="dashboard" id="dashboard">
+    <div class="stat-card clickable" onclick="navigateTab('charts')">
+        <div class="stat-label">Temperature</div>
+        <div class="stat-value">
+            {% if recent_parameters %}
+                {{ recent_parameters[0].temperature or '--' }}
+                <span class="stat-unit">°F</span>
+            {% else %}
+                --<span class="stat-unit">°F</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-card clickable" onclick="navigateTab('charts')">
+        <div class="stat-label">pH (Runoff)</div>
+        <div class="stat-value">
+            {% if recent_parameters %}
+                {{ recent_parameters[0].ph_runoff or '--' }}
+            {% else %}
+                --
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-card clickable" onclick="navigateTab('charts')">
+        <div class="stat-label">Humidity</div>
+        <div class="stat-value">
+            {% if recent_parameters %}
+                {{ recent_parameters[0].humidity or '--' }}
+                <span class="stat-unit">%</span>
+            {% else %}
+                --<span class="stat-unit">%</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-card clickable" onclick="navigateTab('schedule')">
+        <div class="stat-label">Upcoming Tasks</div>
+        <div class="stat-value">{{ upcoming_tasks|length }}</div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="showTab('parameters')">Parameters</button>
+    <button class="tab-btn" onclick="showTab('charts')">Charts</button>
+    <button class="tab-btn" onclick="showTab('schedule')">Schedule</button>
+    <button class="tab-btn" onclick="showTab('growlog')">Grow Log</button>
+    <button class="tab-btn" onclick="showTab('amendments')">Amendments</button>
+</div>
+
+<!-- Parameters Tab -->
+<div id="tab-parameters" class="tab-content active">
+    <div class="section">
+        <h2 class="section-title">Plant Parameters</h2>
+        <form id="parameters-form" onsubmit="submitParameters(event)">
+            <!-- Light -->
+            <h3 class="param-category-title">☀️ Light</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Duration (hours)</label>
+                    <input type="number" name="light_hours" step="0.5" min="0" max="24" placeholder="18" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Intensity / PPFD (µmol/m²/s)</label>
+                    <input type="number" name="ppfd" step="1" min="0" placeholder="600" class="form-control">
+                </div>
+            </div>
+
+            <!-- Environment -->
+            <h3 class="param-category-title">🌡️ Environment</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Temperature (°F)</label>
+                    <input type="number" name="temperature" step="0.1" placeholder="75.0" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Humidity (%)</label>
+                    <input type="number" name="humidity" step="0.1" min="0" max="100" placeholder="55.0" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">VPD (kPa)</label>
+                    <input type="number" name="vpd" step="0.01" min="0" placeholder="1.2" class="form-control">
+                </div>
+            </div>
+
+            <!-- Water -->
+            <h3 class="param-category-title">💧 Water</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Water Mbars</label>
+                    <input type="number" name="water_mbars" step="1" min="0" placeholder="30" class="form-control">
+                </div>
+            </div>
+
+            <!-- pH & EC (collapsible) -->
+            <details class="param-collapsible">
+                <summary class="param-category-title" style="cursor: pointer; user-select: none;">⚗️ pH &amp; EC <span style="font-size: 0.8rem; opacity: 0.6;">▸</span></summary>
+                <div class="form-grid" style="margin-top: 15px;">
+                    <div class="form-group">
+                        <label class="form-label">pH (Runoff)</label>
+                        <input type="number" name="ph_runoff" step="0.1" min="0" max="14" placeholder="6.5" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">pH (Feed)</label>
+                        <input type="number" name="ph_feed" step="0.1" min="0" max="14" placeholder="6.2" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">EC/PPM</label>
+                        <input type="number" name="ec_ppm" step="1" min="0" placeholder="800" class="form-control">
+                    </div>
+                </div>
+            </details>
+
+            <!-- Notes & Submit -->
+            <div class="form-grid" style="margin-top: 20px;">
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" placeholder="Any observations..." class="form-control"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Log Parameters</button>
+                </div>
+            </div>
+        </form>
+        <div id="parameters-log" class="log-container">
+            {% for param in recent_parameters %}
+                <div class="log-item">
+                    <div class="log-actions">
+                        <button class="btn btn-small btn-danger" onclick="deleteParameters({{ param.id }})">Delete</button>
+                    </div>
+                    <div class="log-timestamp">{{ param.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
+                    <div class="log-content">
+                        <strong>pH (Runoff):</strong> {{ param.ph_runoff or 'N/A' }} &nbsp;
+                        <strong>pH (Feed):</strong> {{ param.ph_feed or 'N/A' }} &nbsp;
+                        <strong>EC/PPM:</strong> {{ param.ec_ppm or 'N/A' }} &nbsp;
+                        <strong>Temp:</strong> {{ param.temperature or 'N/A' }}°F &nbsp;
+                        <strong>Humidity:</strong> {{ param.humidity or 'N/A' }}% &nbsp;
+                        <strong>Light:</strong> {{ param.light_hours or 'N/A' }}h &nbsp;
+                        <strong>VPD:</strong> {{ param.vpd or 'N/A' }} kPa &nbsp;
+                        <strong>PPFD:</strong> {{ param.ppfd or 'N/A' }} µmol/m²/s &nbsp;
+                        <strong>Water:</strong> {{ param.water_mbars or 'N/A' }} mbars
+                        {% if param.notes %}<br><br><strong>Notes:</strong> {{ param.notes }}{% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <p style="text-align: center; opacity: 0.7;">No parameters recorded yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Charts Tab -->
+<div id="tab-charts" class="tab-content">
+    <div class="section">
+        <h2 class="section-title">Parameter Trends</h2>
+        <div class="chart-controls">
+            <button onclick="loadChart(7)" class="chart-period">7 Days</button>
+            <button onclick="loadChart(30)" class="chart-period active">30 Days</button>
+            <button onclick="loadChart(90)" class="chart-period">90 Days</button>
+            <button onclick="exportCSV()" class="chart-period" style="margin-left: 10px;">📥 Export CSV</button>
+        </div>
+        <div class="chart-container">
+            <canvas id="parametersChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Tab -->
+<div id="tab-schedule" class="tab-content">
+    <div class="section">
+        <h2 class="section-title">Scheduled Tasks</h2>
+        <form id="schedule-form" class="form-grid" onsubmit="submitScheduledTask(event)">
+            <div class="form-group">
+                <label class="form-label">Task Name</label>
+                <input type="text" name="task_name" required placeholder="Watering, feeding, defoliation..." class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Task Type</label>
+                <select name="task_type" id="task-type-select" class="form-control" onchange="toggleTaskType()">
+                    <option value="recurring">Recurring</option>
+                    <option value="one-time">One-time</option>
+                </select>
+            </div>
+            <div class="form-group" id="frequency-group">
+                <label class="form-label">Frequency (days)</label>
+                <input type="number" name="frequency_days" placeholder="7" min="1" class="form-control">
+            </div>
+            <div class="form-group" id="date-group" style="display: none;">
+                <label class="form-label">Date</label>
+                <input type="date" name="specific_date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" placeholder="Additional details..." class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Add Task</button>
+            </div>
+        </form>
+        <div id="scheduled-tasks" class="log-container">
+            {% for task in upcoming_tasks %}
+                <div class="log-item">
+                    <div class="log-actions">
+                        <button class="btn btn-small btn-primary" onclick="completeTask({{ task.id }})">Complete</button>
+                        <button class="btn btn-small btn-danger" onclick="deleteTask({{ task.id }})">Delete</button>
+                    </div>
+                    <div class="log-timestamp">Due: {{ task.next_due.strftime('%Y-%m-%d') if task.next_due else 'No date' }}</div>
+                    <div class="log-content">
+                        <strong>{{ task.task_name }}</strong>
+                        {% if task.description %}<br>{{ task.description }}{% endif %}
+                        {% if task.is_recurring %}<br><em>Repeats every {{ task.frequency_days }} days</em>{% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <p style="text-align: center; opacity: 0.7;">No scheduled tasks.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Grow Log Tab -->
+<div id="tab-growlog" class="tab-content">
+    <div class="section">
+        <h2 class="section-title">Grow Log</h2>
+        <form id="growlog-form" class="form-grid" onsubmit="submitGrowLog(event)">
+            <div class="form-group">
+                <label class="form-label">Activity Type</label>
+                <select name="task_type" required class="form-control">
+                    <option value="">Select activity...</option>
+                    <option value="Watering">Watering</option>
+                    <option value="Feeding">Feeding</option>
+                    <option value="Training">Training (LST/HST/Topping)</option>
+                    <option value="Defoliation">Defoliation</option>
+                    <option value="Transplant">Transplant</option>
+                    <option value="Flip to Flower">Flip to Flower</option>
+                    <option value="Pest Treatment">Pest Treatment</option>
+                    <option value="Environment">Environment Adjustment</option>
+                    <option value="Harvest">Harvest</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" required placeholder="Details about the activity..." class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Log Activity</button>
+            </div>
+        </form>
+        <div id="growlog-log" class="log-container">
+            {% for entry in recent_grow_logs %}
+                <div class="log-item">
+                    <div class="log-actions">
+                        <button class="btn btn-small btn-danger" onclick="deleteGrowLog({{ entry.id }})">Delete</button>
+                    </div>
+                    <div class="log-timestamp">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
+                    <div class="log-content">
+                        <strong>{{ entry.task_type }}</strong>
+                        {% if entry.description %}<br>{{ entry.description }}{% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <p style="text-align: center; opacity: 0.7;">No grow log entries yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Amendments Tab -->
+<div id="tab-amendments" class="tab-content">
+    <div class="section">
+        <h2 class="section-title">Amendments &amp; Nutrients</h2>
+        <form id="amendment-form" class="form-grid" onsubmit="submitAmendment(event)">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" name="name" required placeholder="Cal-Mag, Fox Farm Big Bloom..." class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Type</label>
+                <select name="type" class="form-control">
+                    <option value="nutrient">Nutrient</option>
+                    <option value="soil">Soil Amendment</option>
+                    <option value="supplement">Supplement</option>
+                    <option value="pesticide">Pesticide / IPM</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Amount</label>
+                <input type="number" name="amount" step="0.1" min="0" placeholder="5" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Unit</label>
+                <select name="unit" class="form-control">
+                    <option value="ml">ml</option>
+                    <option value="L">L</option>
+                    <option value="tsp">tsp</option>
+                    <option value="tbsp">tbsp</option>
+                    <option value="g">g</option>
+                    <option value="oz">oz</option>
+                    <option value="cups">cups</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea name="notes" placeholder="Per gallon, foliar spray, etc..." class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Add Amendment</button>
+            </div>
+        </form>
+        <div id="amendments-list" class="log-container">
+            <p style="text-align: center; opacity: 0.7;">Loading amendments...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let chart = null;
+    const currentCropId = {{ selected_crop.id }};
+
+    function showTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            if (btn.textContent.trim().toLowerCase().replace(' ', '') === tabName) btn.classList.add('active');
+        });
+        if (tabName === 'charts') loadChart(30);
+        else if (tabName === 'amendments') loadAmendments();
+    }
+
+    function navigateTab(tabName) {
+        showTab(tabName);
+        document.querySelector('.tabs').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function switchCrop(cropId) {
+        window.location.href = `{{ url_for('dashboard.index') }}?crop_id=${cropId}`;
+    }
+
+    async function api(endpoint, method = 'GET', data = null) {
+        const options = { method, headers: { 'Content-Type': 'application/json' } };
+        if (data) options.body = JSON.stringify(data);
+        const response = await fetch(endpoint, options);
+        return response.json();
+    }
+
+    async function submitParameters(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(
+            [...formData.entries()].filter(([k, v]) => v !== '')
+        );
+        try {
+            const result = await api(`/api/crop/${currentCropId}/parameters`, 'POST', data);
+            if (result.success) { event.target.reset(); location.reload(); }
+        } catch (error) { alert('Failed to save parameters'); }
+    }
+
+    async function submitScheduledTask(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData.entries());
+        data.is_recurring = data.task_type === 'recurring';
+        try {
+            const result = await api(`/api/crop/${currentCropId}/scheduled`, 'POST', data);
+            if (result.success) { event.target.reset(); location.reload(); }
+        } catch (error) { alert('Failed to save task'); }
+    }
+
+    async function submitGrowLog(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData.entries());
+        try {
+            const result = await api(`/api/crop/${currentCropId}/growlog`, 'POST', data);
+            if (result.success) { event.target.reset(); location.reload(); }
+        } catch (error) { alert('Failed to log activity'); }
+    }
+
+    async function submitAmendment(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData.entries());
+        try {
+            const result = await api(`/api/crop/${currentCropId}/amendments`, 'POST', data);
+            if (result.success) { event.target.reset(); loadAmendments(); }
+        } catch (error) { alert('Failed to add amendment'); }
+    }
+
+    async function loadAmendments() {
+        try {
+            const items = await api(`/api/crop/${currentCropId}/amendments`);
+            const container = document.getElementById('amendments-list');
+            if (items.length === 0) {
+                container.innerHTML = '<p style="text-align: center; opacity: 0.7;">No amendments added yet.</p>';
+                return;
+            }
+            container.innerHTML = items.map(item => `
+                <div class="log-item">
+                    <div class="log-actions">
+                        <button class="btn btn-small btn-danger" onclick="deleteAmendment(${item.id})">Delete</button>
+                    </div>
+                    <div class="log-timestamp">${new Date(item.date_applied).toLocaleDateString()}</div>
+                    <div class="log-content">
+                        <strong>${item.name}</strong>
+                        ${item.type ? `<span style="opacity: 0.7;"> · ${item.type}</span>` : ''}
+                        ${item.amount ? `<br>${item.amount} ${item.unit || ''}` : ''}
+                        ${item.notes ? `<br><span style="opacity: 0.8;">${item.notes}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) { console.error('Failed to load amendments:', error); }
+    }
+
+    async function loadChart(days) {
+        try {
+            document.querySelectorAll('.chart-period').forEach(btn => btn.classList.remove('active'));
+            event?.target?.classList.add('active');
+            const data = await api(`/api/crop/${currentCropId}/parameters/chart?days=${days}`);
+            const ctx = document.getElementById('parametersChart').getContext('2d');
+            if (chart) chart.destroy();
+            const datasets = [];
+            for (const [key, dataset] of Object.entries(data.datasets)) {
+                if (dataset.data && dataset.data.some(val => val !== null)) {
+                    datasets.push({ ...dataset, fill: false, tension: 0.3 });
+                }
+            }
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: data.labels, datasets },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#e8f0e8' } } },
+                    scales: {
+                        x: { ticks: { color: '#e8f0e8' }, grid: { color: 'rgba(232, 240, 232, 0.1)' } },
+                        y: { ticks: { color: '#e8f0e8' }, grid: { color: 'rgba(232, 240, 232, 0.1)' } }
+                    }
+                }
+            });
+        } catch (error) { console.error('Failed to load chart:', error); }
+    }
+
+    async function exportCSV() {
+        try {
+            const params = await api(`/api/crop/${currentCropId}/parameters`);
+            if (!params.length) { alert('No data to export'); return; }
+            const headers = ['Date', 'pH (Runoff)', 'pH (Feed)', 'EC/PPM', 'Temperature (°F)', 'Humidity (%)', 'Light Hours', 'VPD (kPa)', 'PPFD (µmol/m²/s)', 'Water Mbars', 'Notes'];
+            const rows = params.map(p => [
+                p.timestamp, p.ph_runoff ?? '', p.ph_feed ?? '', p.ec_ppm ?? '',
+                p.temperature ?? '', p.humidity ?? '', p.light_hours ?? '',
+                p.vpd ?? '', p.ppfd ?? '', p.water_mbars ?? '',
+                (p.notes || '').replace(/"/g, '""')
+            ].map(v => `"${v}"`).join(','));
+            const csv = [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `plantchap-parameters-${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (error) { alert('Failed to export'); }
+    }
+
+    function toggleTaskType() {
+        const type = document.getElementById('task-type-select').value;
+        document.getElementById('frequency-group').style.display = type === 'recurring' ? 'block' : 'none';
+        document.getElementById('date-group').style.display = type === 'one-time' ? 'block' : 'none';
+    }
+
+    async function deleteParameters(id) {
+        if (confirm('Delete this parameter reading?')) {
+            await api(`/api/crop/${currentCropId}/parameters?id=${id}`, 'DELETE');
+            location.reload();
+        }
+    }
+
+    async function deleteGrowLog(id) {
+        if (confirm('Delete this grow log entry?')) {
+            await api(`/api/crop/${currentCropId}/growlog?id=${id}`, 'DELETE');
+            location.reload();
+        }
+    }
+
+    async function deleteAmendment(id) {
+        if (confirm('Delete this amendment?')) {
+            await api(`/api/crop/${currentCropId}/amendments?id=${id}`, 'DELETE');
+            loadAmendments();
+        }
+    }
+
+    async function completeTask(id) {
+        await api(`/api/crop/${currentCropId}/scheduled`, 'PUT', {id});
+        location.reload();
+    }
+
+    async function deleteTask(id) {
+        if (confirm('Delete this scheduled task?')) {
+            await api(`/api/crop/${currentCropId}/scheduled?id=${id}`, 'DELETE');
+            location.reload();
+        }
+    }
+
+    function showCreateCrop() {
+        const name = prompt('Crop name:');
+        if (!name) return;
+        const strain = prompt('Strain (optional):');
+        const medium = prompt('Medium (soil, coco, hydro):');
+        const grow_space = prompt('Grow space (e.g., 4x4 tent):');
+        
+        const data = { name };
+        if (strain) data.strain = strain;
+        if (medium) data.medium = medium;
+        if (grow_space) data.grow_space = grow_space;
+        
+        fetch('{{ url_for("dashboard.create_crop") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(result => {
+            if (result.success) {
+                window.location.href = `{{ url_for('dashboard.index') }}?crop_id=${result.id}`;
+            } else {
+                alert('Failed to create crop: ' + (result.error || 'Unknown error'));
+            }
+        })
+        .catch(() => alert('Failed to create crop'));
+    }
+</script>
+{% endblock %}

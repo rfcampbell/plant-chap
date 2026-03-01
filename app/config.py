@@ -1,0 +1,36 @@
+"""
+Configuration settings for Plant Chap
+"""
+import os
+from datetime import timedelta
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('PLANTCHAP_DATABASE_URL') or os.environ.get('DATABASE_URL') or 'postgresql:///plantchap'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_DURATION = timedelta(days=30)
+    MIN_PASSWORD_LENGTH = 8
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    SQLALCHEMY_ECHO = False
+
+class ProductionConfig(Config):
+    DEBUG = False
+    SESSION_COOKIE_SECURE = True
+
+class TestingConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
+    WTF_CSRF_ENABLED = False
+
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+    'default': DevelopmentConfig
+}

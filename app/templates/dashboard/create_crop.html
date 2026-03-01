@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <h1 style="color: var(--seafoam); margin-bottom: 30px;">🌱 Create New Crop</h1>
+    
+    <div style="background: rgba(240, 244, 248, 0.05); padding: 30px; border-radius: 16px; border: 1px solid rgba(240, 244, 248, 0.1);">
+        <form method="POST" action="{{ url_for('dashboard.create_crop') }}">
+            <div class="form-group">
+                <label class="form-label">Crop Name *</label>
+                <input type="text" name="name" required placeholder="e.g., Tent Run #1" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Strain</label>
+                <input type="text" name="strain" placeholder="e.g., Blue Dream" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Medium</label>
+                <select name="medium" class="form-control">
+                    <option value="">Select medium...</option>
+                    <option value="soil">Soil</option>
+                    <option value="coco">Coco Coir</option>
+                    <option value="hydro">Hydroponic</option>
+                    <option value="dwc">DWC</option>
+                    <option value="aero">Aeroponic</option>
+                    <option value="living_soil">Living Soil</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Grow Space</label>
+                <input type="text" name="grow_space" placeholder="e.g., 4x4 tent, outdoor, closet" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Date Planted</label>
+                <input type="date" name="date_planted" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-control">
+                    <option value="seedling">Seedling</option>
+                    <option value="vegetative" selected>Vegetative</option>
+                    <option value="flowering">Flowering</option>
+                    <option value="drying">Drying</option>
+                    <option value="curing">Curing</option>
+                    <option value="harvested">Harvested</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea name="notes" placeholder="Any notes about this crop..." class="form-control" rows="3"></textarea>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button type="submit" class="btn btn-primary">Create Crop</button>
+                <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
