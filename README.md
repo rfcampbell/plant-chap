@@ -1,22 +1,5 @@
-# 🐠 Plant Chap
-
-**Aquarium tracker for fishkeepers who care about their water.**
-
-![Plant Chap](icon.png)
-
-Track water parameters, schedule maintenance, manage fish inventory, and monitor your aquarium's health — all from a clean, mobile-friendly interface.
-
-## Features
-
-- **Water Parameters** — Log temperature, pH, ammonia, nitrite, nitrate with timestamps and notes
-- **Charts** — Visualize parameter trends over 7/30/90 days with multi-axis Chart.js graphs
-- **Scheduled Tasks** — Recurring and one-time maintenance reminders
-- **Fish Inventory** — Track species with held/planned counts, auto-fetched Wikipedia thumbnails and species info
-- **Maintenance Log** — Record water changes, filter cleanings, equipment checks
-- **Multi-Aquarium** — Manage multiple tanks from one account
-- **CSV Export** — Export parameter data for external analysis
-- **PWA** — Install as a standalone app on iOS/Android from the browser
-- **Slack Notifications** — Optional DMs for due/overdue tasks and new task alerts
+# Plant Chap
+Garden tracker
 
 ## Screenshots
 
