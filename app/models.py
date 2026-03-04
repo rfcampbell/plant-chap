@@ -19,6 +19,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     display_name = db.Column(db.String(100), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
     
     # Relationships
     crops = db.relationship('Crop', backref='owner', lazy=True, cascade='all, delete-orphan')

@@ -39,6 +39,9 @@ def create_app(config_name='default'):
     from app.api import bp as api_bp
     app.register_blueprint(api_bp, url_prefix='/api')
     
+    from app.admin import bp as admin_bp
+    app.register_blueprint(admin_bp)
+    
     @app.context_processor
     def inject_config():
         return dict(config=app.config)

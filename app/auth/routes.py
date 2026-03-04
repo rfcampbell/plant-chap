@@ -4,6 +4,7 @@ Authentication routes - login, register, logout
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user, login_required
 from urllib.parse import urlsplit
+from datetime import datetime
 
 from app.auth import bp
 from app.auth.forms import LoginForm, RegisterForm, ChangePasswordForm
@@ -20,6 +21,8 @@ def login():
         user = User.query.filter_by(email=form.email.data.lower()).first()
         
         if user and user.check_password(form.password.data):
+            user.last_login = datetime.utcnow()
+            db.session.commit()
             login_user(user, remember=form.remember_me.data)
             
             # Redirect to next page or dashboard

@@ -317,6 +317,9 @@
                 <div class="user-info">
                     Welcome, {{ current_user.display_name }}!
                 </div>
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">⚙️ Admin</a>
+                {% endif %}
                 <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary">Logout</a>
             </div>
         </header>

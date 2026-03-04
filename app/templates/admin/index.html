@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1 style="color: var(--leaf); font-size: 1.8rem;">⚙️ Admin Panel</h1>
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+
+    <div class="section" style="padding: 25px;">
+        <h2 class="section-title" style="margin-bottom: 5px;">Users ({{ user_data|length }})</h2>
+        <p style="opacity: 0.5; font-size: 0.85rem; margin-bottom: 20px;">Manage registered accounts</p>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid rgba(78,205,78,0.2); text-align: left;">
+                        <th style="padding: 10px; color: var(--leaf);">User</th>
+                        <th style="padding: 10px; color: var(--leaf);">Email</th>
+                        <th style="padding: 10px; color: var(--leaf);">Crops</th>
+                        <th style="padding: 10px; color: var(--leaf);">Registered</th>
+                        <th style="padding: 10px; color: var(--leaf);">Last Login</th>
+                        <th style="padding: 10px; color: var(--leaf);">Role</th>
+                        <th style="padding: 10px; color: var(--leaf);">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in user_data %}
+                    <tr style="border-bottom: 1px solid rgba(232,240,232,0.1);">
+                        <td style="padding: 12px 10px;">
+                            <strong>{{ item.user.display_name }}</strong>
+                            {% if item.user.id == current_user.id %}
+                            <span style="opacity: 0.5; font-size: 0.8rem;">(you)</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 10px; opacity: 0.8;">{{ item.user.email }}</td>
+                        <td style="padding: 12px 10px;">{{ item.crop_count }}</td>
+                        <td style="padding: 12px 10px; opacity: 0.7; font-size: 0.85rem;">
+                            {{ item.user.created_at.strftime('%Y-%m-%d') if item.user.created_at else 'N/A' }}
+                        </td>
+                        <td style="padding: 12px 10px; opacity: 0.7; font-size: 0.85rem;">
+                            {% if item.user.last_login %}
+                                {{ item.user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                <span style="opacity: 0.4;">Never</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 10px;">
+                            {% if item.user.is_admin %}
+                            <span style="color: var(--leaf); font-weight: 600;">Admin</span>
+                            {% else %}
+                            <span style="opacity: 0.5;">User</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 10px;">
+                            {% if item.user.id != current_user.id %}
+                            <div style="display: flex; gap: 8px;">
+                                <form method="POST" action="{{ url_for('admin.toggle_admin', user_id=item.user.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-secondary btn-small" title="{{ 'Revoke admin' if item.user.is_admin else 'Make admin' }}">
+                                        {{ '👑' if not item.user.is_admin else '👤' }}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=item.user.id) }}"
+                                      onsubmit="return confirm('Delete user {{ item.user.display_name }} ({{ item.user.email }})? This will delete ALL their data including crops, parameters, logs, and photos. This cannot be undone.');"
+                                      style="display: inline;">
+                                    <button type="submit" class="btn btn-danger btn-small" title="Delete user">🗑️</button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <span style="opacity: 0.3;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
