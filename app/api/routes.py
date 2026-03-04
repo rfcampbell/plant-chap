@@ -2,12 +2,20 @@
 API routes - JSON API for charts and CRUD operations
 All operations are scoped to the current user's crops
 """
-from flask import jsonify, request
+import os
+import re
+import time
+import requests as http_requests
+from flask import jsonify, request, send_from_directory
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 
 from app.api import bp
 from app.models import db, Crop, PlantParameter, GrowLog, ScheduledTask, Amendment
+
+MEDIA_CROPS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'media', 'crops')
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+MAX_PHOTO_SIZE = 5 * 1024 * 1024  # 5MB
 
 def get_user_crop(crop_id):
     """Helper to get crop that belongs to current user"""
@@ -513,3 +521,138 @@ def crop_stats(crop_id):
         'total_amendments': total_amendments,
         'recent_logs': recent_logs
     })
+
+# ── Crop Photo Upload ──────────────────────────────────────────
+
+@bp.route('/media/crops/<path:filename>')
+@login_required
+def serve_crop_photo(filename):
+    """Serve crop photos from media directory"""
+    return send_from_directory(MEDIA_CROPS_DIR, filename)
+
+@bp.route('/crop/<int:crop_id>/photo', methods=['POST'])
+@login_required
+def upload_crop_photo(crop_id):
+    """Upload a photo for a crop"""
+    crop = get_user_crop(crop_id)
+    if not crop:
+        return jsonify({'success': False, 'error': 'Crop not found'}), 404
+
+    file = request.files.get('photo')
+    if not file or not file.filename:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_EXTENSIONS:
+        return jsonify({'success': False, 'error': f'File type not allowed. Use: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+
+    # Check size
+    file.seek(0, 2)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_PHOTO_SIZE:
+        return jsonify({'success': False, 'error': 'File too large (max 5MB)'}), 400
+
+    filename = f'{crop_id}_{int(time.time())}.{ext}'
+    os.makedirs(MEDIA_CROPS_DIR, exist_ok=True)
+    file.save(os.path.join(MEDIA_CROPS_DIR, filename))
+
+    crop.photo = filename
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'filename': filename})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# ── Strain Info ─────────────────────────────────────────────────
+
+@bp.route('/crop/<int:crop_id>/strain-info', methods=['POST'])
+@login_required
+def save_strain_info(crop_id):
+    """Save strain info fields to a crop"""
+    crop = get_user_crop(crop_id)
+    if not crop:
+        return jsonify({'success': False, 'error': 'Crop not found'}), 404
+
+    data = request.json
+    if data.get('strain_description') is not None:
+        crop.strain_description = data['strain_description']
+    if data.get('strain_type') is not None:
+        crop.strain_type = data['strain_type']
+    if data.get('strain_lineage') is not None:
+        crop.strain_lineage = data['strain_lineage']
+    if data.get('strain_breeder') is not None:
+        crop.strain_breeder = data['strain_breeder']
+
+    try:
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# ── Seedfinder.eu Strain Lookup ─────────────────────────────────
+
+def slugify(text):
+    """Convert text to URL slug for seedfinder"""
+    return re.sub(r'[^a-z0-9-]', '', text.lower().strip().replace(' ', '-').replace('_', '-'))
+
+@bp.route('/strain-lookup')
+@login_required
+def strain_lookup():
+    """Lookup strain info from seedfinder.eu"""
+    query = request.args.get('query', '').strip()
+    breeder = request.args.get('breeder', '').strip()
+    if not query:
+        return jsonify({'success': False, 'error': 'Query required'}), 400
+
+    slug = slugify(query)
+    urls_to_try = []
+    if breeder:
+        urls_to_try.append(f'https://seedfinder.eu/en/strain-info/{slug}/{slugify(breeder)}')
+    urls_to_try.append(f'https://seedfinder.eu/en/strain-info/{slug}')
+
+    page_text = None
+    final_url = None
+    for url in urls_to_try:
+        try:
+            resp = http_requests.get(url, timeout=10, headers={
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
+            })
+            if resp.status_code == 200 and 'strain-info' in resp.url:
+                page_text = resp.text
+                final_url = resp.url
+                break
+        except Exception:
+            continue
+
+    if not page_text:
+        return jsonify({'success': False, 'error': 'Strain not found on seedfinder.eu'})
+
+    result = {'success': True, 'url': final_url}
+
+    # Extract breeder from database/breeder link
+    breeder_match = re.search(r'href=["\'][^"\']*database/breeder/[^"\']*["\'][^>]*>\s*([A-Z][^<]{2,60}?)\s*</a>', page_text)
+    if breeder_match:
+        result['breeder'] = breeder_match.group(1).strip()
+
+    # Extract description - look for "StrainName is an indica/sativa..." pattern in page text
+    desc_match = re.search(r'([\w][\w\s\'-]{3,60}is an (?:indica|sativa)[^<]*?\.)', page_text, re.IGNORECASE)
+    if desc_match:
+        result['description'] = desc_match.group(1).strip()
+
+    # Extract type (indica/sativa) from description
+    desc_text = result.get('description', '')
+    type_match = re.search(r'(indica\s*/?\s*sativa|sativa\s*/?\s*indica|indica|sativa)(?:\s+(?:hybrid|dominant|variety))?',
+                           desc_text, re.IGNORECASE)
+    if type_match:
+        result['type'] = type_match.group(0).strip().title()
+
+    # Extract lineage from description - "crossing X with Y" or "cross of X and Y"
+    lineage_match = re.search(r'(?:cross(?:ing)?\s+(?:a\s+)?|bred from\s+|cross of\s+)(.+?)(?:\.|$)',
+                              desc_text, re.IGNORECASE)
+    if lineage_match:
+        result['lineage'] = lineage_match.group(1).strip()
+
+    return jsonify(result)

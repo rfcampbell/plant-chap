@@ -46,6 +46,11 @@ class Crop(db.Model):
     date_flipped = db.Column(db.DateTime)
     harvest_date = db.Column(db.DateTime)
     status = db.Column(db.String(50), default='vegetative')  # seedling, vegetative, flowering, drying, curing, harvested
+    photo = db.Column(db.String(255))
+    strain_description = db.Column(db.Text)
+    strain_type = db.Column(db.String(50))
+    strain_lineage = db.Column(db.String(200))
+    strain_breeder = db.Column(db.String(100))
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     

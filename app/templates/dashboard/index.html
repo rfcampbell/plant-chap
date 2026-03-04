@@ -248,6 +248,12 @@
             {% endfor %}
         </select>
     </div>
+    {% if selected_crop.photo %}
+    <div style="flex-shrink: 0;">
+        <img src="/api/media/crops/{{ selected_crop.photo }}" alt="{{ selected_crop.name }}" 
+             style="width: 60px; height: 60px; border-radius: 12px; object-fit: cover; border: 2px solid rgba(78,205,78,0.3);">
+    </div>
+    {% endif %}
     <div class="crop-info">
         <span class="crop-badge badge-{{ selected_crop.status }}">{{ selected_crop.status }}</span>
         {% if selected_crop.strain %}<span style="opacity: 0.7;">{{ selected_crop.strain }}</span>{% endif %}
@@ -298,6 +304,38 @@
                 <label class="form-label">Harvest Date</label>
                 <input type="date" id="edit-harvest-date" class="form-control" value="{{ selected_crop.harvest_date.strftime('%Y-%m-%d') if selected_crop.harvest_date else '' }}">
             </div>
+            <!-- Photo Upload -->
+            <div class="form-group" style="margin-top: 15px;">
+                <label class="form-label">Crop Photo</label>
+                {% if selected_crop.photo %}
+                <div style="margin-bottom: 8px;">
+                    <img src="/api/media/crops/{{ selected_crop.photo }}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">
+                </div>
+                {% endif %}
+                <input type="file" id="edit-photo" accept=".jpg,.jpeg,.png,.gif,.webp" class="form-control" style="padding: 8px;">
+            </div>
+            <!-- Strain Info -->
+            <h3 style="color: var(--leaf); margin-top: 20px; margin-bottom: 10px; font-size: 1rem;">🌿 Strain Info</h3>
+            <div class="form-group">
+                <label class="form-label">Breeder</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="edit-strain-breeder" class="form-control" value="{{ selected_crop.strain_breeder or '' }}">
+                    <button type="button" class="btn btn-secondary btn-small" onclick="lookupStrain()" title="Lookup on seedfinder.eu" style="white-space: nowrap;">🔍 Lookup</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Type</label>
+                <input type="text" id="edit-strain-type" class="form-control" placeholder="Indica/Sativa Hybrid" value="{{ selected_crop.strain_type or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Lineage</label>
+                <input type="text" id="edit-strain-lineage" class="form-control" placeholder="Parent A x Parent B" value="{{ selected_crop.strain_lineage or '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="edit-strain-description" class="form-control" rows="3" placeholder="Strain description...">{{ selected_crop.strain_description or '' }}</textarea>
+            </div>
+            <div id="strain-lookup-result" style="margin-top: 10px;"></div>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <button type="button" class="btn btn-secondary" onclick="hideEditCrop()">Cancel</button>
@@ -305,6 +343,27 @@
         </form>
     </div>
 </div>
+
+<!-- Strain Info Card -->
+{% if selected_crop.strain_description or selected_crop.strain_type or selected_crop.strain_lineage or selected_crop.strain_breeder %}
+<div class="section" style="margin-bottom: 30px; padding: 20px;">
+    <h3 style="color: var(--leaf); margin-bottom: 12px;">🌿 Strain Info</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        {% if selected_crop.strain_breeder %}
+        <div><span style="opacity: 0.6; font-size: 0.85rem;">Breeder</span><br><strong>{{ selected_crop.strain_breeder }}</strong></div>
+        {% endif %}
+        {% if selected_crop.strain_type %}
+        <div><span style="opacity: 0.6; font-size: 0.85rem;">Type</span><br><strong>{{ selected_crop.strain_type }}</strong></div>
+        {% endif %}
+        {% if selected_crop.strain_lineage %}
+        <div><span style="opacity: 0.6; font-size: 0.85rem;">Lineage</span><br><strong>{{ selected_crop.strain_lineage }}</strong></div>
+        {% endif %}
+    </div>
+    {% if selected_crop.strain_description %}
+    <p style="margin-top: 12px; opacity: 0.85; line-height: 1.6;">{{ selected_crop.strain_description }}</p>
+    {% endif %}
+</div>
+{% endif %}
 
 <!-- Dashboard Stats -->
 <div class="dashboard" id="dashboard">
@@ -856,24 +915,86 @@
             date_flipped: document.getElementById('edit-date-flipped').value,
             harvest_date: document.getElementById('edit-harvest-date').value
         };
-        // Remove empty strings
         Object.keys(data).forEach(k => { if (data[k] === '') delete data[k]; });
         
         try {
+            // Save crop basics
             const result = await fetch(`/crop/${currentCropId}/edit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
             const json = await result.json();
-            if (json.success) {
-                location.reload();
-            } else {
-                alert('Failed: ' + (json.error || 'Unknown error'));
+            if (!json.success) { alert('Failed: ' + (json.error || 'Unknown error')); return; }
+
+            // Upload photo if selected
+            const photoInput = document.getElementById('edit-photo');
+            if (photoInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('photo', photoInput.files[0]);
+                await fetch(`/api/crop/${currentCropId}/photo`, { method: 'POST', body: formData });
             }
+
+            // Save strain info
+            const strainData = {
+                strain_breeder: document.getElementById('edit-strain-breeder').value,
+                strain_type: document.getElementById('edit-strain-type').value,
+                strain_lineage: document.getElementById('edit-strain-lineage').value,
+                strain_description: document.getElementById('edit-strain-description').value
+            };
+            await api(`/api/crop/${currentCropId}/strain-info`, 'POST', strainData);
+
+            location.reload();
         } catch (error) {
             alert('Failed to update crop');
         }
+    }
+
+    async function lookupStrain() {
+        const strain = document.getElementById('edit-strain').value.trim();
+        const breeder = document.getElementById('edit-strain-breeder').value.trim();
+        const resultDiv = document.getElementById('strain-lookup-result');
+        
+        if (!strain) { alert('Enter a strain name first'); return; }
+        
+        resultDiv.innerHTML = '<span style="opacity: 0.7;">🔍 Looking up strain...</span>';
+        
+        try {
+            let url = `/api/strain-lookup?query=${encodeURIComponent(strain)}`;
+            if (breeder) url += `&breeder=${encodeURIComponent(breeder)}`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+            
+            if (!data.success) {
+                resultDiv.innerHTML = `<span style="color: #ff6b6b;">❌ ${data.error}</span>`;
+                return;
+            }
+            
+            resultDiv.innerHTML = `
+                <div style="background: rgba(78,205,78,0.1); border: 1px solid rgba(78,205,78,0.2); border-radius: 8px; padding: 12px; margin-top: 10px;">
+                    <strong style="color: var(--leaf);">Found on Seedfinder.eu</strong><br>
+                    ${data.breeder ? `<strong>Breeder:</strong> ${data.breeder}<br>` : ''}
+                    ${data.type ? `<strong>Type:</strong> ${data.type}<br>` : ''}
+                    ${data.lineage ? `<strong>Lineage:</strong> ${data.lineage}<br>` : ''}
+                    ${data.description ? `<strong>Description:</strong> ${data.description}<br>` : ''}
+                    <button type="button" class="btn btn-primary btn-small" style="margin-top: 8px;" onclick="applyStrainLookup()">✅ Auto-fill</button>
+                </div>
+            `;
+            // Store for auto-fill
+            window._strainLookupData = data;
+        } catch (error) {
+            resultDiv.innerHTML = '<span style="color: #ff6b6b;">❌ Lookup failed</span>';
+        }
+    }
+
+    function applyStrainLookup() {
+        const data = window._strainLookupData;
+        if (!data) return;
+        if (data.breeder) document.getElementById('edit-strain-breeder').value = data.breeder;
+        if (data.type) document.getElementById('edit-strain-type').value = data.type;
+        if (data.lineage) document.getElementById('edit-strain-lineage').value = data.lineage;
+        if (data.description) document.getElementById('edit-strain-description').value = data.description;
+        document.getElementById('strain-lookup-result').innerHTML = '<span style="color: var(--leaf);">✅ Fields populated!</span>';
     }
 
     // Close modals on background click
