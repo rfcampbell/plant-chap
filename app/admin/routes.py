@@ -107,6 +107,8 @@ def send_reset(user_id):
     token = s.dumps(user.email, salt='password-reset')
 
     reset_url = url_for('auth.reset_password', token=token, _external=True)
+
+    # Try sending email, fall back to showing the link directly
     success = send_email(
         user.email,
         'Plant Chap - Password Reset',
@@ -120,6 +122,6 @@ def send_reset(user_id):
     if success:
         flash(f'Reset email sent to {user.email}.', 'success')
     else:
-        flash(f'Failed to send reset email to {user.email}.', 'danger')
+        flash(f'Could not send email. Copy this reset link (expires in 1 hour): {reset_url}', 'warning')
 
     return redirect(url_for('admin.index'))

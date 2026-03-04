@@ -19,7 +19,7 @@ def send_email(to, subject, body):
     msg.attach(MIMEText(body, 'plain'))
 
     try:
-        server = smtplib.SMTP(config['MAIL_SERVER'], config['MAIL_PORT'])
+        server = smtplib.SMTP(config['MAIL_SERVER'], config['MAIL_PORT'], timeout=10)
         if config.get('MAIL_USE_TLS'):
             server.starttls()
         username = config.get('MAIL_USERNAME')
