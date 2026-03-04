@@ -30,7 +30,7 @@ class RegisterForm(FlaskForm):
         EqualTo('password', message='Passwords must match.')
     ])
     accepted_terms = BooleanField(
-        Markup('I agree to the <a href="/terms" target="_blank" style="color: var(--leaf);">Terms and Conditions</a>'),
+        Markup('I agree to the <a href="/auth/terms" target="_blank" style="color: var(--leaf);">Terms and Conditions</a>'),
         validators=[DataRequired(message='You must accept the Terms and Conditions.')]
     )
     submit = SubmitField('Register')
