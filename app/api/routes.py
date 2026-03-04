@@ -618,7 +618,7 @@ def strain_lookup():
     final_url = None
     for url in urls_to_try:
         try:
-            resp = http_requests.get(url, timeout=10, headers=headers)
+            resp = http_requests.get(url, timeout=5, headers=headers)
             if resp.status_code == 200 and 'strain-info' in resp.url:
                 page_text = resp.text
                 final_url = resp.url
@@ -630,7 +630,7 @@ def strain_lookup():
     if not page_text and breeder:
         try:
             breeder_url = f'https://seedfinder.eu/en/database/breeder/{slugify(breeder)}'
-            resp = http_requests.get(breeder_url, timeout=10, headers=headers)
+            resp = http_requests.get(breeder_url, timeout=5, headers=headers)
             if resp.status_code == 200:
                 # Find all strain links and match by keyword overlap
                 strain_links = re.findall(r'href="(?:https://seedfinder\.eu)?(/en/strain-info/([^"]+)/' + re.escape(slugify(breeder)) + r')"[^>]*>\s*([^<]+)', resp.text)
@@ -669,7 +669,7 @@ def strain_lookup():
                     best_match = (scored[0][2], scored[0][3])
                 if best_match and best_score >= 2:
                     match_url = f'https://seedfinder.eu{best_match[0]}'
-                    resp2 = http_requests.get(match_url, timeout=10, headers=headers)
+                    resp2 = http_requests.get(match_url, timeout=5, headers=headers)
                     if resp2.status_code == 200:
                         page_text = resp2.text
                         final_url = match_url
@@ -680,14 +680,14 @@ def strain_lookup():
     if not page_text:
         try:
             listing_url = f'https://seedfinder.eu/en/strain-info/{slug}'
-            resp = http_requests.get(listing_url, timeout=10, headers=headers)
+            resp = http_requests.get(listing_url, timeout=5, headers=headers)
             if resp.status_code == 200:
                 # If it's a listing page with multiple breeders, grab the first specific strain link
                 strain_links = re.findall(r'href="(?:https://seedfinder\.eu)?(/en/strain-info/[^"]+)"[^>]*>\s*([^<]+)', resp.text)
                 for href, name in strain_links:
                     if '/strain-info/' in href and href.count('/') >= 4:
                         match_url = f'https://seedfinder.eu{href}'
-                        resp2 = http_requests.get(match_url, timeout=10, headers=headers)
+                        resp2 = http_requests.get(match_url, timeout=5, headers=headers)
                         if resp2.status_code == 200:
                             page_text = resp2.text
                             final_url = match_url
