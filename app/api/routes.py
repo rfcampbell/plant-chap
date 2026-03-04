@@ -15,7 +15,7 @@ from app.models import db, Crop, PlantParameter, GrowLog, ScheduledTask, Amendme
 
 MEDIA_CROPS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'media', 'crops')
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
-MAX_PHOTO_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_PHOTO_SIZE = 20 * 1024 * 1024  # 20MB (will be resized down)
 
 def get_user_crop(crop_id):
     """Helper to get crop that belongs to current user"""
@@ -553,9 +553,28 @@ def upload_crop_photo(crop_id):
     if size > MAX_PHOTO_SIZE:
         return jsonify({'success': False, 'error': 'File too large (max 5MB)'}), 400
 
-    filename = f'{crop_id}_{int(time.time())}.{ext}'
+    filename = f'{crop_id}_{int(time.time())}.jpg'
     os.makedirs(MEDIA_CROPS_DIR, exist_ok=True)
-    file.save(os.path.join(MEDIA_CROPS_DIR, filename))
+    filepath = os.path.join(MEDIA_CROPS_DIR, filename)
+
+    # Resize large images to max 1200px and convert to JPEG
+    try:
+        from PIL import Image
+        img = Image.open(file)
+        # Convert RGBA/palette to RGB for JPEG
+        if img.mode in ('RGBA', 'P', 'LA'):
+            img = img.convert('RGB')
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        # Resize if larger than 1200px on any side
+        max_dim = 1200
+        if img.width > max_dim or img.height > max_dim:
+            img.thumbnail((max_dim, max_dim), Image.LANCZOS)
+        img.save(filepath, 'JPEG', quality=85, optimize=True)
+    except Exception:
+        # Fallback: save raw file if Pillow fails
+        file.seek(0)
+        file.save(filepath)
 
     crop.photo = filename
     try:

@@ -932,7 +932,11 @@
             if (photoInput.files.length > 0) {
                 const formData = new FormData();
                 formData.append('photo', photoInput.files[0]);
-                await fetch(`/api/crop/${currentCropId}/photo`, { method: 'POST', body: formData });
+                const photoResp = await fetch(`/api/crop/${currentCropId}/photo`, { method: 'POST', body: formData });
+                const photoResult = await photoResp.json();
+                if (!photoResult.success) {
+                    alert('Photo upload failed: ' + (photoResult.error || 'Unknown error'));
+                }
             }
 
             // Save strain info
