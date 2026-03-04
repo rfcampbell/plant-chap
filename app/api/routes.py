@@ -603,6 +603,9 @@ def save_strain_info(crop_id):
         crop.strain_lineage = data['strain_lineage']
     if data.get('strain_breeder') is not None:
         crop.strain_breeder = data['strain_breeder']
+    if data.get('strain_lineage_tree') is not None:
+        import json
+        crop.strain_lineage_tree = json.dumps(data['strain_lineage_tree'])
 
     try:
         db.session.commit()
@@ -736,10 +739,96 @@ def strain_lookup():
     if type_match:
         result['type'] = type_match.group(0).strip().title()
 
-    # Extract lineage from description - "crossing X with Y" or "cross of X and Y"
+    # Extract lineage from description (simple text)
     lineage_match = re.search(r'(?:cross(?:ing)?\s+(?:a\s+)?|bred from\s+|cross of\s+)(.+?)(?:\.|$)',
                               desc_text, re.IGNORECASE)
     if lineage_match:
         result['lineage'] = lineage_match.group(1).strip()
 
+    # Extract full lineage tree from the page
+    lineage_tree = _parse_lineage_tree(page_text)
+    if lineage_tree:
+        result['lineage_tree'] = lineage_tree
+
     return jsonify(result)
+
+
+def _parse_lineage_tree(page_html):
+    """Parse the seedfinder.eu lineage tree HTML into a nested structure."""
+    idx = page_html.find('id="lineage"')
+    if idx < 0:
+        return None
+
+    # Find end of lineage section
+    end_idx = page_html.find('id="hybrids"', idx)
+    if end_idx < 0:
+        end_idx = idx + 15000
+    lineage_html = page_html[idx:end_idx]
+
+    # Parse into flat list of (depth, name) tuples
+    lines = []
+    depth = 0
+    i = 0
+    while i < len(lineage_html):
+        if lineage_html[i:i+3] == '<ul':
+            depth += 1
+            i += 3
+        elif lineage_html[i:i+5] == '</ul>':
+            depth -= 1
+            i += 5
+        elif lineage_html[i:i+3] == '<li':
+            li_end = lineage_html.find('</li>', i)
+            next_ul = lineage_html.find('<ul', i+3)
+            next_li = lineage_html.find('<li', i+3)
+            bounds = [x for x in [li_end, next_ul, next_li] if x > i]
+            content_end = min(bounds) if bounds else min(len(lineage_html), i + 2000)
+            content = lineage_html[i:content_end]
+
+            # Extract strain names from links
+            names = re.findall(r"""href=['"][^'"]*strain-info/[^'"]*['"][^>]*>([^<]+)</a>""", content)
+            if names:
+                unique_names = list(dict.fromkeys(n.strip() for n in names))
+                cross = ' × '.join(unique_names)
+                lines.append((depth, cross))
+            i = content_end
+        else:
+            i += 1
+
+    if not lines:
+        return None
+
+    # Clean: remove »»» entries, strip the × from name
+    cleaned = []
+    for depth, name in lines:
+        name = name.strip()
+        if '»»»' in name or not name:
+            continue
+        # Clean up the name
+        name = re.sub(r'\s*»»»\s*', '', name).strip()
+        if name:
+            cleaned.append((depth, name))
+
+    if not cleaned:
+        return None
+
+    # Build nested tree from flat (depth, name) list
+    def build_tree(items, idx=0, parent_depth=-1):
+        result = []
+        i = idx
+        while i < len(items):
+            depth, name = items[i]
+            if depth <= parent_depth:
+                break
+            node = {'name': name, 'children': []}
+            # Look ahead for children (anything deeper before next same-or-shallower)
+            j = i + 1
+            while j < len(items) and items[j][0] > depth:
+                j += 1
+            if j > i + 1:
+                node['children'] = build_tree(items, i + 1, depth)
+            result.append(node)
+            i = j
+        return result
+
+    tree = build_tree(cleaned)
+    return tree

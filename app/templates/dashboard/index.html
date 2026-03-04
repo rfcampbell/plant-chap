@@ -364,6 +364,42 @@
             {% if selected_crop.strain_description %}
             <p style="margin-top: 12px; opacity: 0.85; line-height: 1.6;">{{ selected_crop.strain_description }}</p>
             {% endif %}
+            {% if selected_crop.strain_lineage_tree %}
+            <details style="margin-top: 15px;">
+                <summary style="cursor: pointer; color: var(--leaf); font-weight: 600; font-size: 0.95rem; user-select: none;">
+                    🌳 Full Lineage Tree
+                </summary>
+                <div id="lineage-tree" style="margin-top: 10px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; overflow-x: auto; font-size: 0.85rem;"></div>
+            </details>
+            <script>
+            (function() {
+                const treeData = {{ selected_crop.strain_lineage_tree | safe }};
+                function renderTree(nodes, depth) {
+                    if (!nodes || !nodes.length) return '';
+                    let html = '<ul style="list-style: none; padding-left: ' + (depth > 0 ? '20' : '0') + 'px; margin: 4px 0;">';
+                    for (const node of nodes) {
+                        const hasChildren = node.children && node.children.length > 0;
+                        const color = depth === 0 ? 'var(--leaf)' : (depth === 1 ? '#90ee90' : 'var(--mist)');
+                        const weight = depth <= 1 ? 'font-weight: 600;' : '';
+                        html += '<li style="margin: 3px 0;">';
+                        if (hasChildren) {
+                            html += '<details' + (depth < 2 ? ' open' : '') + '>';
+                            html += '<summary style="cursor: pointer; color: ' + color + '; ' + weight + '">';
+                            html += node.name + '</summary>';
+                            html += renderTree(node.children, depth + 1);
+                            html += '</details>';
+                        } else {
+                            html += '<span style="color: ' + color + '; ' + weight + ' padding-left: 16px; display: inline-block;">' + node.name + '</span>';
+                        }
+                        html += '</li>';
+                    }
+                    html += '</ul>';
+                    return html;
+                }
+                document.getElementById('lineage-tree').innerHTML = renderTree(treeData, 0);
+            })();
+            </script>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -950,6 +986,9 @@
                 strain_lineage: document.getElementById('edit-strain-lineage').value,
                 strain_description: document.getElementById('edit-strain-description').value
             };
+            if (window._strainLineageTree) {
+                strainData.strain_lineage_tree = window._strainLineageTree;
+            }
             await api(`/api/crop/${currentCropId}/strain-info`, 'POST', strainData);
 
             location.reload();
@@ -1002,6 +1041,8 @@
         if (data.type) document.getElementById('edit-strain-type').value = data.type;
         if (data.lineage) document.getElementById('edit-strain-lineage').value = data.lineage;
         if (data.description) document.getElementById('edit-strain-description').value = data.description;
+        // Store the lineage tree for saving
+        window._strainLineageTree = data.lineage_tree || null;
         document.getElementById('strain-lookup-result').innerHTML = '<span style="color: var(--leaf);">✅ Fields populated!</span>';
     }
 
