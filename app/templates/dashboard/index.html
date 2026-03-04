@@ -248,12 +248,6 @@
             {% endfor %}
         </select>
     </div>
-    {% if selected_crop.photo %}
-    <div style="flex-shrink: 0;">
-        <img src="/api/media/crops/{{ selected_crop.photo }}" alt="{{ selected_crop.name }}" 
-             style="width: 60px; height: 60px; border-radius: 12px; object-fit: cover; border: 2px solid rgba(78,205,78,0.3);">
-    </div>
-    {% endif %}
     <div class="crop-info">
         <span class="crop-badge badge-{{ selected_crop.status }}">{{ selected_crop.status }}</span>
         {% if selected_crop.strain %}<span style="opacity: 0.7;">{{ selected_crop.strain }}</span>{% endif %}
@@ -344,24 +338,34 @@
     </div>
 </div>
 
-<!-- Strain Info Card -->
-{% if selected_crop.strain_description or selected_crop.strain_type or selected_crop.strain_lineage or selected_crop.strain_breeder %}
+<!-- Strain Info & Photo Card -->
+{% if selected_crop.photo or selected_crop.strain_description or selected_crop.strain_type or selected_crop.strain_lineage or selected_crop.strain_breeder %}
 <div class="section" style="margin-bottom: 30px; padding: 20px;">
-    <h3 style="color: var(--leaf); margin-bottom: 12px;">🌿 Strain Info</h3>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-        {% if selected_crop.strain_breeder %}
-        <div><span style="opacity: 0.6; font-size: 0.85rem;">Breeder</span><br><strong>{{ selected_crop.strain_breeder }}</strong></div>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
+        {% if selected_crop.photo %}
+        <div style="flex-shrink: 0;">
+            <img src="/api/media/crops/{{ selected_crop.photo }}" alt="{{ selected_crop.name }}" 
+                 style="width: 160px; height: 160px; border-radius: 12px; object-fit: cover; border: 2px solid rgba(78,205,78,0.3);">
+        </div>
         {% endif %}
-        {% if selected_crop.strain_type %}
-        <div><span style="opacity: 0.6; font-size: 0.85rem;">Type</span><br><strong>{{ selected_crop.strain_type }}</strong></div>
-        {% endif %}
-        {% if selected_crop.strain_lineage %}
-        <div><span style="opacity: 0.6; font-size: 0.85rem;">Lineage</span><br><strong>{{ selected_crop.strain_lineage }}</strong></div>
-        {% endif %}
+        <div style="flex: 1; min-width: 200px;">
+            <h3 style="color: var(--leaf); margin-bottom: 12px;">🌿 Strain Info</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                {% if selected_crop.strain_breeder %}
+                <div><span style="opacity: 0.6; font-size: 0.85rem;">Breeder</span><br><strong>{{ selected_crop.strain_breeder }}</strong></div>
+                {% endif %}
+                {% if selected_crop.strain_type %}
+                <div><span style="opacity: 0.6; font-size: 0.85rem;">Type</span><br><strong>{{ selected_crop.strain_type }}</strong></div>
+                {% endif %}
+                {% if selected_crop.strain_lineage %}
+                <div><span style="opacity: 0.6; font-size: 0.85rem;">Lineage</span><br><strong>{{ selected_crop.strain_lineage }}</strong></div>
+                {% endif %}
+            </div>
+            {% if selected_crop.strain_description %}
+            <p style="margin-top: 12px; opacity: 0.85; line-height: 1.6;">{{ selected_crop.strain_description }}</p>
+            {% endif %}
+        </div>
     </div>
-    {% if selected_crop.strain_description %}
-    <p style="margin-top: 12px; opacity: 0.85; line-height: 1.6;">{{ selected_crop.strain_description }}</p>
-    {% endif %}
 </div>
 {% endif %}
 
