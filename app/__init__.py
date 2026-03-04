@@ -1,7 +1,7 @@
 """
 Flask application factory for Plant Chap
 """
-from flask import Flask
+from flask import Flask, render_template
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
@@ -42,6 +42,10 @@ def create_app(config_name='default'):
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp)
     
+    @app.route('/terms')
+    def terms():
+        return render_template('auth/terms.html', title='Terms and Conditions')
+
     @app.context_processor
     def inject_config():
         return dict(config=app.config)
