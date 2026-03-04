@@ -634,18 +634,39 @@ def strain_lookup():
             if resp.status_code == 200:
                 # Find all strain links and match by keyword overlap
                 strain_links = re.findall(r'href="(?:https://seedfinder\.eu)?(/en/strain-info/([^"]+)/' + re.escape(slugify(breeder)) + r')"[^>]*>\s*([^<]+)', resp.text)
-                query_words = set(query.lower().split())
+                query_lower = query.lower()
+                query_words = set(query_lower.split())
                 query_slug_parts = set(slugify(query).split('-'))
-                best_match = None
-                best_score = 0
+                # Also split compound words (e.g. "hashplant" -> "hash", "plant")
+                extra = set()
+                for w in query_words:
+                    if len(w) > 6:
+                        # Try splitting at common cannabis term boundaries
+                        for split_at in ['hash', 'plant', 'haze', 'kush', 'cake', 'dream', 'berry', 'fruit', 'milk', 'lotus']:
+                            if split_at in w and w != split_at:
+                                idx = w.index(split_at)
+                                if idx > 0:
+                                    extra.add(w[:idx])
+                                extra.add(split_at)
+                                rest = w[idx+len(split_at):]
+                                if rest:
+                                    extra.add(rest)
+                all_query = query_words | query_slug_parts | extra
+                scored = []
                 for href, strain_slug, strain_name in strain_links:
                     name_words = set(strain_name.strip().lower().split())
                     slug_parts = set(strain_slug.split('-'))
-                    # Score: word overlap + slug overlap (deduped)
-                    overlap = len(query_words & name_words) + len(query_slug_parts & slug_parts - name_words)
-                    if overlap > best_score:
-                        best_score = overlap
-                        best_match = (href, strain_name.strip())
+                    all_name = name_words | slug_parts
+                    overlap = len(all_query & all_name)
+                    # Tiebreaker: penalize extra words in the strain name (prefer closer matches)
+                    penalty = len(all_name - all_query)
+                    scored.append((overlap, -penalty, href, strain_name.strip()))
+                scored.sort(reverse=True)
+                best_match = None
+                best_score = 0
+                if scored and scored[0][0] >= 2:
+                    best_score = scored[0][0]
+                    best_match = (scored[0][2], scored[0][3])
                 if best_match and best_score >= 2:
                     match_url = f'https://seedfinder.eu{best_match[0]}'
                     resp2 = http_requests.get(match_url, timeout=10, headers=headers)
