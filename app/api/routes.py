@@ -608,6 +608,7 @@ def strain_lookup():
         return jsonify({'success': False, 'error': 'Query required'}), 400
 
     slug = slugify(query)
+    headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'}
     urls_to_try = []
     if breeder:
         urls_to_try.append(f'https://seedfinder.eu/en/strain-info/{slug}/{slugify(breeder)}')
@@ -617,9 +618,7 @@ def strain_lookup():
     final_url = None
     for url in urls_to_try:
         try:
-            resp = http_requests.get(url, timeout=10, headers={
-                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
-            })
+            resp = http_requests.get(url, timeout=10, headers=headers)
             if resp.status_code == 200 and 'strain-info' in resp.url:
                 page_text = resp.text
                 final_url = resp.url
@@ -627,8 +626,56 @@ def strain_lookup():
         except Exception:
             continue
 
+    # Fallback: search the breeder's strain list for fuzzy match
+    if not page_text and breeder:
+        try:
+            breeder_url = f'https://seedfinder.eu/en/database/breeder/{slugify(breeder)}'
+            resp = http_requests.get(breeder_url, timeout=10, headers=headers)
+            if resp.status_code == 200:
+                # Find all strain links and match by keyword overlap
+                strain_links = re.findall(r'href="(?:https://seedfinder\.eu)?(/en/strain-info/([^"]+)/' + re.escape(slugify(breeder)) + r')"[^>]*>\s*([^<]+)', resp.text)
+                query_words = set(query.lower().split())
+                query_slug_parts = set(slugify(query).split('-'))
+                best_match = None
+                best_score = 0
+                for href, strain_slug, strain_name in strain_links:
+                    name_words = set(strain_name.strip().lower().split())
+                    slug_parts = set(strain_slug.split('-'))
+                    # Score: word overlap + slug overlap (deduped)
+                    overlap = len(query_words & name_words) + len(query_slug_parts & slug_parts - name_words)
+                    if overlap > best_score:
+                        best_score = overlap
+                        best_match = (href, strain_name.strip())
+                if best_match and best_score >= 2:
+                    match_url = f'https://seedfinder.eu{best_match[0]}'
+                    resp2 = http_requests.get(match_url, timeout=10, headers=headers)
+                    if resp2.status_code == 200:
+                        page_text = resp2.text
+                        final_url = match_url
+        except Exception:
+            pass
+
+    # Fallback: search without breeder — try the strain listing page
     if not page_text:
-        return jsonify({'success': False, 'error': 'Strain not found on seedfinder.eu'})
+        try:
+            listing_url = f'https://seedfinder.eu/en/strain-info/{slug}'
+            resp = http_requests.get(listing_url, timeout=10, headers=headers)
+            if resp.status_code == 200:
+                # If it's a listing page with multiple breeders, grab the first specific strain link
+                strain_links = re.findall(r'href="(?:https://seedfinder\.eu)?(/en/strain-info/[^"]+)"[^>]*>\s*([^<]+)', resp.text)
+                for href, name in strain_links:
+                    if '/strain-info/' in href and href.count('/') >= 4:
+                        match_url = f'https://seedfinder.eu{href}'
+                        resp2 = http_requests.get(match_url, timeout=10, headers=headers)
+                        if resp2.status_code == 200:
+                            page_text = resp2.text
+                            final_url = match_url
+                            break
+        except Exception:
+            pass
+
+    if not page_text:
+        return jsonify({'success': False, 'error': 'Strain not found on seedfinder.eu. Try the exact name from seedfinder (e.g. "Super Silver Hash Plant" for Bodhi).'})
 
     result = {'success': True, 'url': final_url}
 
