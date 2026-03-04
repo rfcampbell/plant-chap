@@ -1,7 +1,7 @@
 {
   "name": "Plant Chap",
   "short_name": "PlantChap",
-  "description": "Cannabis Cultivation Tracker",
+  "description": "Plant Cultivation Tracker",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a1628",

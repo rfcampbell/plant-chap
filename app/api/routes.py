@@ -641,7 +641,7 @@ def strain_lookup():
                 extra = set()
                 for w in query_words:
                     if len(w) > 6:
-                        # Try splitting at common cannabis term boundaries
+                        # Try splitting at common compound word boundaries
                         for split_at in ['hash', 'plant', 'haze', 'kush', 'cake', 'dream', 'berry', 'fruit', 'milk', 'lotus']:
                             if split_at in w and w != split_at:
                                 idx = w.index(split_at)
