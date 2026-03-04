@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 50px auto;">
+    <div style="background: rgba(240, 244, 248, 0.05); backdrop-filter: blur(10px); padding: 40px; border-radius: 16px; border: 1px solid rgba(240, 244, 248, 0.1);">
+        <h1 style="color: var(--leaf); margin-bottom: 30px;">Terms and Conditions</h1>
+        <p style="opacity: 0.6; margin-bottom: 30px; font-size: 0.9rem;">Last updated: March 2026</p>
+
+        <div style="line-height: 1.8; color: rgba(240, 244, 248, 0.85);">
+            <h3 style="color: var(--leaf); margin: 25px 0 10px;">1. Account Responsibility</h3>
+            <p>You are responsible for maintaining the security of your account credentials. Do not share your password with others. You are responsible for all activity that occurs under your account.</p>
+
+            <h3 style="color: var(--leaf); margin: 25px 0 10px;">2. Data Collection</h3>
+            <p>We collect the information you provide when registering (email address, display name) and the plant data you enter into the application (crops, grow logs, parameters, amendments). This data is used solely to provide the Plant Chap service to you.</p>
+
+            <h3 style="color: var(--leaf); margin: 25px 0 10px;">3. User-Generated Content</h3>
+            <p>You retain ownership of all content you create within Plant Chap, including grow logs, notes, and uploaded photos. By using the service, you grant us a limited license to store and display this content to you as part of the service.</p>
+
+            <h3 style="color: var(--leaf); margin: 25px 0 10px;">4. Privacy</h3>
+            <p>Your personal information and plant data will not be sold to third parties. We may use aggregated, anonymised data to improve the service. Your email address is used for account management and password recovery only.</p>
+
+            <h3 style="color: var(--leaf); margin: 25px 0 10px;">5. No Warranties</h3>
+            <p>Plant Chap is provided "as is" without warranties of any kind. We do not guarantee the accuracy of any growing advice, calculations, or recommendations. Always use your own judgement when caring for your plants.</p>
+
+            <h3 style="color: var(--leaf); margin: 25px 0 10px;">6. Limitation of Liability</h3>
+            <p>To the fullest extent permitted by law, Plant Chap and its operators shall not be liable for any indirect, incidental, or consequential damages arising from your use of the service, including but not limited to crop loss or damage.</p>
+
+            <h3 style="color: var(--leaf); margin: 25px 0 10px;">7. Account Termination</h3>
+            <p>We reserve the right to suspend or terminate accounts that violate these terms or are used for unlawful purposes. You may delete your account at any time by contacting an administrator.</p>
+
+            <h3 style="color: var(--leaf); margin: 25px 0 10px;">8. Changes to Terms</h3>
+            <p>We may update these terms from time to time. Continued use of the service after changes constitutes acceptance of the updated terms.</p>
+        </div>
+
+        <div style="margin-top: 40px; text-align: center;">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-secondary">← Back to Registration</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

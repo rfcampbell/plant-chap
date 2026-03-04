@@ -5,8 +5,11 @@ from functools import wraps
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 
+from itsdangerous import URLSafeTimedSerializer
+
 from app.admin import bp
 from app.models import db, User, Crop
+from app.email import send_email
 
 
 def admin_required(f):
@@ -90,5 +93,33 @@ def toggle_admin(user_id):
         if request.is_json:
             return jsonify({'success': False, 'error': str(e)}), 400
         flash('Failed to update user.', 'danger')
+
+    return redirect(url_for('admin.index'))
+
+
+@bp.route('/user/<int:user_id>/send-reset', methods=['POST'])
+@admin_required
+def send_reset(user_id):
+    """Send a password reset email to a user"""
+    from flask import current_app
+    user = User.query.get_or_404(user_id)
+    s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    token = s.dumps(user.email, salt='password-reset')
+
+    reset_url = url_for('auth.reset_password', token=token, _external=True)
+    success = send_email(
+        user.email,
+        'Plant Chap - Password Reset',
+        f'Hi {user.display_name},\n\n'
+        f'An admin has requested a password reset for your account.\n\n'
+        f'To reset your password, visit the following link:\n\n{reset_url}\n\n'
+        f'This link expires in 1 hour.\n\n'
+        f'— Plant Chap'
+    )
+
+    if success:
+        flash(f'Reset email sent to {user.email}.', 'success')
+    else:
+        flash(f'Failed to send reset email to {user.email}.', 'danger')
 
     return redirect(url_for('admin.index'))

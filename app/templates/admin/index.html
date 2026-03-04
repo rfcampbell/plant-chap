@@ -60,6 +60,9 @@
                                         {{ '👑' if not item.user.is_admin else '👤' }}
                                     </button>
                                 </form>
+                                <form method="POST" action="{{ url_for('admin.send_reset', user_id=item.user.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-secondary btn-small" title="Send password reset email">📧</button>
+                                </form>
                                 <form method="POST" action="{{ url_for('admin.delete_user', user_id=item.user.id) }}"
                                       onsubmit="return confirm('Delete user {{ item.user.display_name }} ({{ item.user.email }})? This will delete ALL their data including crops, parameters, logs, and photos. This cannot be undone.');"
                                       style="display: inline;">
