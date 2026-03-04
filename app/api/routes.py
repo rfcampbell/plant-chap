@@ -360,6 +360,128 @@ def parameters_chart(crop_id):
     
     return jsonify(chart_data)
 
+# CSV Import API
+@bp.route('/crop/<int:crop_id>/parameters/import', methods=['POST'])
+@login_required
+def import_parameters(crop_id):
+    """Import plant parameters from a CSV file (e.g. sensor exports).
+    
+    Supports formats:
+    - Columns with Temperature_Celsius / Temperature_Fahrenheit
+    - Columns with Relative_Humidity or Humidity
+    - First column is always timestamp
+    - Auto-detects delimiter (comma)
+    - Skips duplicate timestamps
+    """
+    import csv
+    import io
+    
+    crop = get_user_crop(crop_id)
+    if not crop:
+        return jsonify({'success': False, 'error': 'Crop not found'}), 404
+    
+    file = request.files.get('file')
+    csv_text = request.form.get('csv_text')
+    
+    if file:
+        content = file.read().decode('utf-8')
+    elif csv_text:
+        content = csv_text
+    else:
+        return jsonify({'success': False, 'error': 'No file or CSV text provided'}), 400
+    
+    lines = content.strip().split('\n')
+    if len(lines) < 2:
+        return jsonify({'success': False, 'error': 'CSV must have a header and at least one data row'}), 400
+    
+    # Parse header
+    header = lines[0].strip().lower()
+    
+    # Detect column mapping from header
+    temp_is_celsius = 'celsius' in header
+    temp_is_fahrenheit = 'fahrenheit' in header
+    has_temp = 'temperature' in header or 'temp' in header
+    has_humidity = 'humidity' in header
+    
+    # Parse data rows
+    imported = 0
+    skipped = 0
+    errors = []
+    
+    # Get existing timestamps for this crop to skip duplicates
+    existing_timestamps = set()
+    existing = PlantParameter.query.filter_by(crop_id=crop_id).all()
+    for p in existing:
+        if p.timestamp:
+            existing_timestamps.add(p.timestamp.strftime('%Y-%m-%d %H:%M:%S'))
+    
+    for i, line in enumerate(lines[1:], start=2):
+        line = line.strip()
+        if not line:
+            continue
+        
+        parts = [p.strip() for p in line.split(',')]
+        if len(parts) < 2:
+            errors.append(f'Line {i}: not enough columns')
+            continue
+        
+        # Parse timestamp
+        try:
+            ts = datetime.fromisoformat(parts[0])
+        except ValueError:
+            try:
+                ts = datetime.strptime(parts[0], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                errors.append(f'Line {i}: invalid timestamp "{parts[0]}"')
+                continue
+        
+        ts_key = ts.strftime('%Y-%m-%d %H:%M:%S')
+        if ts_key in existing_timestamps:
+            skipped += 1
+            continue
+        
+        # Parse temperature
+        temperature = None
+        if has_temp and len(parts) > 1 and parts[1]:
+            try:
+                temp_val = float(parts[1])
+                if temp_is_celsius:
+                    temperature = round(temp_val * 9/5 + 32, 1)  # Convert C to F
+                else:
+                    temperature = temp_val
+            except ValueError:
+                pass
+        
+        # Parse humidity
+        humidity = None
+        if has_humidity and len(parts) > 2 and parts[2]:
+            try:
+                humidity = float(parts[2])
+            except ValueError:
+                pass
+        
+        param = PlantParameter(
+            crop_id=crop_id,
+            timestamp=ts,
+            temperature=temperature,
+            humidity=humidity
+        )
+        db.session.add(param)
+        existing_timestamps.add(ts_key)
+        imported += 1
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'imported': imported,
+            'skipped': skipped,
+            'errors': errors[:10]  # Limit error messages
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 # Stats API
 @bp.route('/crop/<int:crop_id>/stats')
 @login_required
